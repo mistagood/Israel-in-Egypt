@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any
-from datetime import datetime
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -94,6 +94,7 @@ def _wait_for_completion(client: Any, video_id: str, timeout: int = 600, interva
 
     deadline = time.time() + timeout
     last_progress = None
+    print(f"Polling video {video_id} for completion (timeout {timeout}s)...", flush=True)
     while time.time() < deadline:
         resp = _retrieve_video(client, video_id)
         d = _as_dict(resp)
@@ -106,10 +107,10 @@ def _wait_for_completion(client: Any, video_id: str, timeout: int = 600, interva
             except Exception:
                 progress = None
         if progress is not None and progress != last_progress:
-            print(f"progress: {progress}%, status: {status}")
+            print(f"progress: {progress}%, status: {status}", flush=True)
             last_progress = progress
         else:
-            print(f"status: {status}")
+            print(f"status: {status}", flush=True)
         url = _extract_url(resp)
         if url:
             return resp
@@ -121,7 +122,7 @@ def _wait_for_completion(client: Any, video_id: str, timeout: int = 600, interva
 
 def _save_bytes(data: bytes, out_dir: str, vid: str) -> str:
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_name = f"{vid}_{timestamp}.mp4"
     out_path = Path(out_dir) / out_name
     with open(out_path, "wb") as f:
@@ -170,16 +171,33 @@ def _download_via_url(url: str, out_dir: str, api_key: str | None = None) -> str
 
 
 def _init_client_from_env() -> Any:
-    """Load .env, verify OPENAI_API_KEY, and return an OpenAI client (or legacy module)."""
-    load_dotenv()  # load .env if present
+    """Load .env (search upward from this file), verify OPENAI_API_KEY, and return an OpenAI client."""
+    # search upwards from the directory that contains this file for a .env file
+    start = Path(__file__).resolve()
+    env_path = None
+    for p in (start.parent, *start.parents):
+        candidate = p / ".env"
+        if candidate.exists():
+            env_path = candidate
+            break
+    # fallback to cwd/.env if none found above
+    if env_path is None:
+        candidate = Path.cwd() / ".env"
+        if candidate.exists():
+            env_path = candidate
+    # load if found, otherwise let load_dotenv use defaults (env vars)
+    load_dotenv(dotenv_path=env_path if env_path and env_path.exists() else None)
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        raise SystemExit("OPENAI_API_KEY not set. Add it to .env or export it in your shell.")
+    if env_path:
+        print(f"Loaded .env from: {env_path}", flush=True)
+    # debug helper: show which key prefix is in use (masked)
+    if api_key:
+        print(f"Using OPENAI_API_KEY prefix: {api_key[:8]}... (len={len(api_key)})", flush=True)
+    else:
+        raise SystemExit(f"OPENAI_API_KEY not set. Add it to .env (searched up from {start}) or export it in your shell.")
     try:
-        # modern SDK
         from openai import OpenAI  # type: ignore
     except Exception:
-        # fallback to legacy openai module
         import openai as openai_legacy  # type: ignore
         openai_legacy.api_key = api_key
         return openai_legacy
@@ -208,16 +226,12 @@ def generate_for_prompt(prompt: str, out_dir: str, seconds: str = "4", size: str
     resp = None
     vid = None
 
-    # Prefer SDK create_and_poll for convenience
+    # Always create then poll ourselves so we can show status updates
     try:
-        if hasattr(videos, "create_and_poll"):
-            resp = videos.create_and_poll(prompt=prompt, model="sora-2-pro", seconds=seconds, size=size, poll_interval_ms=2000, timeout=600)
-        else:
-            # create (may return queued object)
-            resp = _generate_video(client, model="sora-2-pro", prompt=prompt, size=size, duration=seconds)
-            vid = getattr(resp, "id", None) or (resp.get("id") if isinstance(resp, dict) else None)
-            if vid:
-                resp = _wait_for_completion(client, vid, timeout=1800, interval=5)
+        resp = _generate_video(client, model="sora-2-pro", prompt=prompt, size=size, duration=seconds)
+        vid = getattr(resp, "id", None) or (resp.get("id") if isinstance(resp, dict) else None)
+        if vid:
+            resp = _wait_for_completion(client, vid, timeout=1800, interval=5)
     except Exception as e:
         return {"prompt": prompt, "error": f"creation/poll failed: {e}", "id": None, "saved": None, "response": None}
 
@@ -317,5 +331,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
