@@ -186,7 +186,7 @@ def _init_client_from_env() -> Any:
         if candidate.exists():
             env_path = candidate
     # load if found, otherwise let load_dotenv use defaults (env vars)
-    load_dotenv(dotenv_path=env_path if env_path and env_path.exists() else None)
+    load_dotenv(dotenv_path=env_path if env_path and env_path.exists() else None, override=True)
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if env_path:
         print(f"Loaded .env from: {env_path}", flush=True)
@@ -291,17 +291,20 @@ def _read_prompts_from_file(path: str) -> list[str]:
 
 
 def main() -> None:
+    repo_root = Path(__file__).resolve().parent.parent
+    default_outdir = repo_root / "videos"
+
     parser = argparse.ArgumentParser(description="Generate videos from prompts and auto-download.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--prompt", "-p", help="Single prompt string.")
     group.add_argument("--prompt-file", "-f", help="File with prompts (newline or JSONL with 'prompt' field).")
     parser.add_argument("--size", default="1280x720", help="Video size (e.g. 1280x720 or 1792x1024).")
     parser.add_argument("--seconds", default="4", choices=["4","8","12"], help="Duration seconds string (4/8/12).")
-    parser.add_argument("--outdir", default="videos", help="Directory to save videos.")
+    parser.add_argument("--outdir", default=None, help="Directory to save videos. Defaults to repo_root/videos.")
     parser.add_argument("--concurrency", type=int, default=1, help="Number of parallel generation threads.")
     args = parser.parse_args()
 
-    out_dir = args.outdir
+    out_dir = str(default_outdir if args.outdir is None or args.outdir == "videos" else args.outdir)
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
     if args.prompt:
