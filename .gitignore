@@ -2,3 +2,8 @@
 .DS_Store
 __pycache__/
 *.pyc
+
+# Local video generation workspace (kept out of this repo)
+/video creation/
+/videos/
+*.mp4
