@@ -1,6 +1,10 @@
-# Chapter 9: Dan — Mobile Contamination
+# Chapter 10: Dan — Mobile Contamination
 
 [Back to Table of Contents](00 - Table of Contents.md)
+
+
+
+
 
 - 600 men as breach carriers
 - Seizure of idol and priest
@@ -8,4 +12,7 @@
 - Destruction of a peaceful people
 - Disappearance of Dan
 
-[Previous](08 - Micah The First Failure of Containment.md) | [Next](10 - Benjamin National-Scale Breach.md)
+
+
+
+[Previous](09 - Micah The First Failure of Containment.md) | [Next](11 - Benjamin National-Scale Breach.md)

@@ -1,6 +1,10 @@
-# Chapter 15: Historical Judgment
+# Chapter 16: Historical Judgment
 
 [Back to Table of Contents](00 - Table of Contents.md)
+
+
+
+
 
 - Fall of Israel
 - Fall of Judah
@@ -11,4 +15,7 @@
 - The unresolved consequence of mishandled ḥērem
 - The necessity of returning to Mosaic law for interpretation
 
-[Previous](14 - Judah Becomes Dan.md) | [Next](99 - Conclusion.md)
+
+
+
+[Previous](15 - Judah Becomes Dan.md) | [Next](99 - Conclusion.md)
